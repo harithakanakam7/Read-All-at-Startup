@@ -138,12 +138,12 @@ CRC is an error-detection mechanism; it is not encryption, authentication, or a 
 
 
 
-- `<img width="1600" height="738" alt="image" src="https://github.com/user-attachments/assets/f0297714-4351-4430-b268-d9300306602b" />
-` — actual board and EEPROM setup
-- `<img width="1918" height="1197" alt="image" src="https://github.com/user-attachments/assets/bdd7e718-7aad-4200-9847-81e313a87aae" />
-` — actual UART output for valid records
-- `<img width="1312" height="761" alt="WhatsApp Image 2026-10-14 at 8 58 52 AM" src="https://github.com/user-attachments/assets/fefe9b7c-501c-4520-9c3f-638e9eab3f9b" />
-` — actual UART output after deliberately corrupting a CRC
+ <img width="1600" height="738" alt="image" src="https://github.com/user-attachments/assets/f0297714-4351-4430-b268-d9300306602b" />
+ — actual board and EEPROM setup
+ <img width="1918" height="1197" alt="image" src="https://github.com/user-attachments/assets/bdd7e718-7aad-4200-9847-81e313a87aae" />
+ — actual UART output for valid records
+ `<img width="1312" height="761" alt="WhatsApp Image 2026-10-14 at 8 58 52 AM" src="https://github.com/user-attachments/assets/fefe9b7c-501c-4520-9c3f-638e9eab3f9b" />
+ — actual UART output after deliberately corrupting a CRC
 
 
 
