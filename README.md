@@ -185,8 +185,6 @@ The results below were captured on real hardware.
 ## Repository structure
 
 <img width="852" height="1085" alt="image" src="https://github.com/user-attachments/assets/49e69811-2cb8-4f0d-9657-86a3874905f7" />
-
-
 ---
 
 ## Known limitations
