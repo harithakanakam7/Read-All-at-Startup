@@ -1,72 +1,50 @@
-# Exercise 19: NvM Read-All-at-Startup
+<div align="center">
 
-[![Language: C](https://img.shields.io/badge/language-C-blue.svg)](https://en.cppreference.com/w/c)
+# 🧠 NvM Read-All-at-Startup
+
+### Exercise 19 · EEPROM restore, CRC-8 validation and failed-block reporting on the NXP S32K144
+
+[![Language: C](https://img.shields.io/badge/language-C-blue.svg?logo=c&logoColor=white)](https://en.cppreference.com/w/c)
 [![Platform: NXP S32K144](https://img.shields.io/badge/platform-NXP%20S32K144-00599C.svg)](https://www.nxp.com/)
-[![Status: In Development](https://img.shields.io/badge/status-in%20development-orange.svg)](#implementation-status)
-[![Validation: Completed](https://img.shields.io/badge/hardware%20validation-pending-lightgrey.svg)](#testing-and-validation)
+[![Interface: I²C + UART](https://img.shields.io/badge/interface-I%C2%B2C%20%2B%20UART-informational.svg)](#hardware-and-software)
+[![Status: Hardware Tested](https://img.shields.io/badge/status-hardware%20tested-brightgreen.svg)](#testing-and-validation)
+[![Scope: Educational](https://img.shields.io/badge/scope-educational-orange.svg)](#known-limitations)
 
-**An embedded C exercise implementing EEPROM Read-All, RAM-mirror restoration, CRC-8 validation, and failed-block reporting over UART.**
+**A simplified, NvM-style Read-All operation: read blocks from an I²C EEPROM, verify them with CRC-8, restore valid data into RAM mirrors, and report failures over UART.**
 
-> **Project status:** In development. The source code has been reviewed for documentation purposes, but hardware results have not been independently verified.
+[Overview](#overview) · [How it works](#how-it-works) · [Memory layout](#memory-layout) · [Testing](#testing-and-validation) · [Build](#build-and-run) · [Limitations](#known-limitations)
 
-## Table of Contents
+</div>
 
-- [Overview](#overview)
-- [Problem Statement](#problem-statement)
-- [Objectives](#objectives)
-- [Hardware and Software](#hardware-and-software)
-- [Architecture](#architecture)
-- [Implementation Details](#implementation-details)
-- [Registered Memory Blocks](#registered-memory-blocks)
-- [CRC-8 Validation](#crc-8-validation)
-- [Testing and Validation](#testing-and-validation)
-- [Build and Run](#build-and-run)
-- [Repository Structure](#repository-structure)
-- [Known Limitations and Review Notes](#known-limitations-and-review-notes)
-- [Future Enhancements](#future-enhancements)
-- [Author](#author)
+
+---
 
 ## Overview
 
-This project implements a simplified NvM-style Read-All operation for an embedded ECU application using an NXP S32K144 microcontroller and an external I²C EEPROM.
+After an ECU reset or power cycle, application data often has to be restored from non-volatile memory. This project implements that startup step on an **NXP S32K144** with an **external I²C EEPROM**.
 
-The firmware iterates over a registered block table, reads each block record from EEPROM, validates the payload using CRC-8, and copies valid payload bytes into the associated RAM mirror. If an I²C read fails or the CRC does not match, the block ID is added to a failed-block list and the outcome is reported through UART.
+The firmware walks a table of registered blocks and, for each one:
 
-This is an educational implementation inspired by automotive non-volatile memory management concepts. It is **not represented as a fully AUTOSAR-compliant NvM module**.
+1. Reads the record from EEPROM through the LPI2C master driver.
+2. Calculates CRC-8 over the payload and compares it with the stored CRC.
+3. Copies the payload into its RAM mirror **only if** the CRC matches.
+4. Adds the block ID to a failed-block list on an I²C error or CRC mismatch.
+5. Prints the failed-block count and IDs over UART.
 
-## Problem Statement
+### Objectives
 
-After an ECU reset or power cycle, application data may need to be restored from non-volatile memory. The software should read each configured block, check data integrity, restore valid data into RAM, and identify blocks that could not be restored successfully.
+| | Goal |
+|---|---|
+| 🔁 | Iterate over registered blocks using a configuration table |
+| 📥 | Read EEPROM records through the LPI2C driver |
+| ✅ | Verify each payload with CRC-8 |
+| 💾 | Restore valid payloads into RAM mirrors |
+| ⚠️ | Record failed block IDs (read failures and CRC mismatches) |
+| 🖥️ | Report results over UART |
 
-## Objectives
+---
 
-- Iterate over registered blocks using a block configuration table.
-- Read EEPROM records through the LPI2C master driver.
-- Verify each record's payload using CRC-8.
-- Copy valid payloads into their associated RAM mirrors.
-- Record failed block IDs for read failures and CRC mismatches.
-- Report the failed-block count and IDs over UART.
-
-## Hardware and Software
-
-### Hardware
-
-- NXP S32K144 evaluation board
-- External I²C EEPROM (exact part number to be documented)
-- USB connection for programming/debugging
-- UART connection or onboard UART bridge for diagnostic output, as applicable
-
-### Software
-
-- S32 Design Studio
-- S32K144 SDK and generated peripheral configuration
-- Embedded C
-- LPI2C and LPUART SDK drivers
-- Git and GitHub
-
-**Before publishing a validated release:** record the exact board revision, EEPROM part number, SDK version, compiler version, and configured I²C address.
-
-## Architecture
+## How it works
 
 ```mermaid
 flowchart TD
@@ -91,118 +69,182 @@ flowchart TD
     O -- No --> P[Print summary over UART]
 ```
 
-The diagram describes the flow implied by the supplied code. The application must call `NvM_Init()` and then `NvM_Run()` for this sequence to occur.
+> The application must call `NvM_Init()` and then `NvM_Run()` for this sequence to occur.
 
-## Implementation Details
+### Code map
 
 | Function / object | Responsibility |
 |---|---|
-| `NvM_Init()` | Initializes clocks, pins, LPUART, and LPI2C |
-| `NvM_BlockType` | Describes a block ID, EEPROM address, RAM mirror pointer, and payload length |
+| `NvM_Init()` | Initializes clocks, pins, LPUART and LPI2C |
+| `NvM_BlockType` | Describes a block: ID, EEPROM address, RAM mirror pointer, payload length |
 | `NVM_Blocks[]` | Registers the blocks processed by Read-All |
 | `EEPROM_Read()` | Reads a record from EEPROM over LPI2C |
 | `EEPROM_WriteRecord()` | Writes a record and waits for the EEPROM write cycle |
 | `CalculateCRC()` | Calculates the configured CRC-8 over payload bytes |
-| `NvM_ReadAll()` | Reads each registered record, validates CRC, restores valid payloads, and records failures |
+| `NvM_ReadAll()` | Reads each record, validates CRC, restores valid payloads, records failures |
 | `NvM_PrintResults()` | Prints the failed-block count and IDs over UART |
-| `NvM_Run()` | Optionally writes initial data, then executes Read-All and prints results |
+| `NvM_Run()` | Optionally writes initial data, then runs Read-All and prints results |
 
-## Registered Memory Blocks
+---
 
-The supplied code defines three registered blocks and three-byte initial payloads.
+## Memory layout
+
+Three blocks are registered, each with a three-byte initial payload.
 
 | Block ID | Initial payload | RAM mirror |
-|---:|---|---|
+|:---:|:---:|---|
 | 1 | `08 05 06` | `RAM_Mirror1` |
 | 2 | `20 06 07` | `RAM_Mirror2` |
 | 3 | `01 01 07` | `RAM_Mirror3` |
 
-The addresses are configured through `BLOCK1_ADDRESS`, `BLOCK2_ADDRESS`, and `BLOCK3_ADDRESS`. The table above describes configured initial data, **not measured EEPROM readback**.
+Addresses are set through `BLOCK1_ADDRESS`, `BLOCK2_ADDRESS` and `BLOCK3_ADDRESS`.
 
-With `BLOCK_LENGTH = 3` and `RECORD_SIZE = 4`, each record consists of three payload bytes followed by one CRC byte.
+**Record format** (`BLOCK_LENGTH = 3`, `RECORD_SIZE = 4`):
 
-## CRC-8 Validation
+```text
+┌──────────┬──────────┬──────────┬──────────┐
+│ Byte 0   │ Byte 1   │ Byte 2   │ Byte 3   │
+│ Payload  │ Payload  │ Payload  │ CRC-8    │
+└──────────┴──────────┴──────────┴──────────┘
+```
 
-The supplied `CalculateCRC()` function uses:
+---
 
-- Initial value: `0xFF`
-- Polynomial: `0x07`
-- Input: payload bytes only
-- Stored CRC: byte at index `BLOCK_LENGTH`
+## CRC-8 validation
 
-The firmware compares the stored CRC with the calculated CRC. On a match, it copies the payload into the RAM mirror. On a mismatch, it records the block ID as failed and does not copy that record's payload into the mirror.
+| Parameter | Value |
+|---|---|
+| Initial value | `0xFF` |
+| Polynomial | `0x07` |
+| Input | Payload bytes only |
+| Stored CRC | Byte at index `BLOCK_LENGTH` |
 
-CRC is an error-detection mechanism; it is not encryption, authentication, or a security boundary.
+- **Match:** the payload is copied into the RAM mirror.
+- **Mismatch:** the block ID is added to the failed list and the payload is **not** copied.
 
-## Testing and Validation
+> [!IMPORTANT]
+> CRC detects accidental corruption. It is not encryption, authentication or a security boundary.
 
+---
 
+## Hardware and software
 
- <img width="1600" height="738" alt="image" src="https://github.com/user-attachments/assets/f0297714-4351-4430-b268-d9300306602b" />
- — actual board and EEPROM setup
- <img width="1918" height="1197" alt="image" src="https://github.com/user-attachments/assets/bdd7e718-7aad-4200-9847-81e313a87aae" />
- — actual UART output for valid records
- `<img width="1312" height="761" alt="WhatsApp Image 2026-10-14 at 8 58 52 AM" src="https://github.com/user-attachments/assets/fefe9b7c-501c-4520-9c3f-638e9eab3f9b" />
- — actual UART output after deliberately corrupting a CRC
+| Hardware | Software |
+|---|---|
+| NXP S32K144 evaluation board | S32 Design Studio |
+| External I²C EEPROM *(part number to be documented)* | S32K144 SDK and generated peripheral configuration |
+| USB connection for programming/debugging | LPI2C and LPUART SDK drivers |
+| UART connection or onboard UART bridge | Embedded C, Git and GitHub |
 
+> [!TIP]
+> Before tagging a validated release, record the board revision, EEPROM part number, SDK version, compiler version and configured I²C address.
 
+---
 
-## Build and Run
+## Testing and validation
 
-1. Open the project in S32 Design Studio.
-2. Confirm the target device, SDK configuration, I²C instance, EEPROM address, and block address definitions.
+The results below were captured on real hardware.
+
+### 1. Test setup
+
+<p align="center">
+  <img width="800" alt="Actual board and EEPROM setup" src="https://github.com/user-attachments/assets/f0297714-4351-4430-b268-d9300306602b" />
+  <br/><em>S32K144 board connected to the external I²C EEPROM</em>
+</p>
+
+### 2. Valid records
+
+<p align="center">
+  <img width="800" alt="UART output for valid records" src="https://github.com/user-attachments/assets/bdd7e718-7aad-4200-9847-81e313a87aae" />
+  <br/><em>UART output when all records pass the CRC check</em>
+</p>
+
+### 3. Fault injection: corrupted CRC
+
+<p align="center">
+  <img width="800" alt="UART output after deliberately corrupting a CRC" src="https://github.com/user-attachments/assets/fefe9b7c-501c-4520-9c3f-638e9eab3f9b" />
+  <br/><em>UART output after deliberately corrupting a stored CRC; the affected block is reported as failed</em>
+</p>
+
+### Results summary
+
+| # | Test | Expected result | Observed | Status |
+|:-:|---|---|---|:-:|
+| 1 | All records valid | Failed count = 0; mirrors restored | See screenshot 2 | ✅ |
+| 2 | One CRC deliberately corrupted | Failed count = 1; block ID listed; mirror not updated | See screenshot 3 | ✅ |
+| 3 | I²C read failure *(e.g. EEPROM disconnected)* | Failed block IDs reported | Not yet tested | ⬜ |
+
+---
+
+## Build and run
+
+1. Open the project in **S32 Design Studio**.
+2. Confirm the target device, SDK configuration, I²C instance, EEPROM address and block addresses.
 3. Build the project and resolve any compiler or linker errors.
 4. Program the S32K144 board.
-5. Configure the application to call `NvM_Init()` before `NvM_Run()`.
-6. Observe UART output and inspect RAM mirrors and the failed-block list in the debugger.
-7. Record the actual output for each test in the validation table.
+5. Make sure the application calls `NvM_Init()` **before** `NvM_Run()`.
+6. Open a serial terminal on the UART port and observe the output.
+7. Inspect the RAM mirrors and failed-block list in the debugger.
 
-### Important: preserve stored data during Read-All testing
+> [!WARNING]
+> **Preserve stored data during Read-All testing.** When `WRITE_INITIAL_DATA == 1U`, `NvM_Run()` calls `NvM_WriteAll()` *before* `NvM_ReadAll()`, which overwrites the records you want to read back. To test restoration of previously stored data, set `WRITE_INITIAL_DATA` to `0U`, then run Read-All.
 
-In the supplied code, `NvM_Run()` calls `NvM_WriteAll()` when `WRITE_INITIAL_DATA == 1U`, before it calls `NvM_ReadAll()`. This overwrites the configured records before reading them. To test restoration of previously stored data, disable the initial write and then execute Read-All.
+---
 
-## Repository Structure
+## Repository structure
 
-Adapt this example to match the files actually present in the S32 Design Studio project; do not remove generated SDK or build configuration files required by the project.
+> Adjust this tree to match the files actually present in your S32 Design Studio project. Keep the generated SDK and build configuration files the project needs.
 
-![Uploading WhatsApp Image 2026-10-14 at 9.01.05 AM.jpeg…]()
+```text
+Read-All-at-Startup/
+├── Sources/            # Application source (main.c, NvM, EEPROM, CRC)
+├── Generated_Code/     # Generated SDK / peripheral configuration
+├── Project_Settings/   # Linker, startup and debugger settings
+├── docs/               # Screenshots and supporting documentation
+└── README.md
+```
 
-## Known Limitations and Review Notes
+---
 
-- Hardware execution and validation results have not been provided yet.
-- The implementation records failed block IDs but does not implement recovery or default-value restoration.
-- `Failed_Blocks` must have enough capacity for every possible failure; ensure `NVM_BLOCK_COUNT` and the failure counter types cannot overflow for the configured project.
-- Confirm the EEPROM's addressing scheme. The supplied code sends only the low eight bits of the address as the memory address; EEPROMs with larger address spaces may require additional device-address bits or address bytes.
-- Confirm the configured record length, EEPROM page size, and block addresses are consistent with the selected EEPROM.
-- The read routine should be checked against the exact EEPROM's random-read protocol and required bus conditions.
-- A CRC mismatch is detected, but no per-block recovery strategy is implemented.
-- This is an educational project, not a production-ready ECU memory-management implementation.
+## Known limitations
 
-## Future Enhancements
+- Failures are **recorded but not recovered**: no default-value restoration is implemented.
+- `Failed_Blocks` must have capacity for every possible failure. Make sure `NVM_BLOCK_COUNT` and the failure counter types cannot overflow.
+- The code sends only the **low eight bits** of the address as the memory address. EEPROMs with larger address spaces may need extra device-address bits or address bytes.
+- Confirm that record length, EEPROM page size and block addresses are consistent with the selected EEPROM.
+- Check the read routine against the exact EEPROM's random-read protocol and required bus conditions.
+- The I²C failure path has not yet been exercised on hardware.
 
-- Add explicit per-block status and failure-reason codes.
-- Implement configurable recovery/default data handling.
-- Add repeatable fault-injection tests for CRC mismatch and I²C failures.
-- Add a requirements-to-test traceability table.
-- Separate memory access, CRC, and block-management logic into independently testable modules.
-- Extend the implementation toward AUTOSAR NvM concepts using the relevant specifications.
+---
 
-## Author
+## Future enhancements
 
-**Haritha Kanakam**  
-Electronics and Communication Engineering | Aspiring Automotive Embedded Engineer
+- [ ] Per-block status and failure-reason codes
+- [ ] Configurable recovery / default data handling
+- [ ] Repeatable fault-injection tests for CRC mismatch and I²C failures
+- [ ] Requirements-to-test traceability table
+- [ ] Separate memory access, CRC and block-management logic into independently testable modules
+- [ ] Extend toward AUTOSAR NvM concepts using the relevant specifications
 
-- GitHub: [@harithakanakam7](https://github.com/harithakanakam7)
-- Portfolio: [harithakanakam.netlify.app](https://harithakanakam.netlify.app)
-- LinkedIn: [Haritha Kanakam](https://www.linkedin.com/in/kharitha07/)
+---
 
 ## References
 
 - NXP S32K1xx reference manual and device documentation
 - S32 Design Studio and S32K144 SDK documentation
-- Documentation for the specific EEPROM used in the hardware setup
+- Datasheet for the specific EEPROM used in the hardware setup
 
 ---
 
-*This README distinguishes code-level implementation from hardware behavior that still needs to be measured and documented.*
+## Author
 
+**Haritha Kanakam**
+Electronics and Communication Engineering · Aspiring Automotive Embedded Engineer
+
+[![GitHub](https://img.shields.io/badge/GitHub-harithakanakam7-181717?logo=github)](https://github.com/harithakanakam7)
+[![Portfolio](https://img.shields.io/badge/Portfolio-harithakanakam.netlify.app-00C7B7)](https://harithakanakam.netlify.app)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Haritha%20Kanakam-0A66C2?logo=linkedin)](https://www.linkedin.com/in/kharitha07/)
+
+<div align="center">
+<sub>This README separates code-level behavior from results measured on hardware.</sub>
+</div>
