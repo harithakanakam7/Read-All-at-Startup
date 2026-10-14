@@ -136,26 +136,16 @@ CRC is an error-detection mechanism; it is not encryption, authentication, or a 
 
 ## Testing and Validation
 
-The following tests are proposed. Update the status and attach real evidence only after running them on the target setup.
 
-| Test | Expected behavior | Status |
-|---|---|---|
-| Valid record | CRC matches and payload is restored to the correct RAM mirror | Not yet documented |
-| Corrupted CRC byte | Block is reported as failed; invalid payload is not copied | Not yet documented |
-| I²C read failure | Block ID is recorded as failed | Not yet documented |
-| All records valid | Failed-block count is zero and success message is printed | Not yet documented |
-| Multiple invalid records | Each failed block ID is reported | Not yet documented |
-| Read-All with initial writes disabled | Existing EEPROM contents are read without being overwritten first | Not yet documented |
 
-### Evidence to add
+- `<img width="1600" height="738" alt="image" src="https://github.com/user-attachments/assets/f0297714-4351-4430-b268-d9300306602b" />
+` — actual board and EEPROM setup
+- `<img width="1918" height="1197" alt="image" src="https://github.com/user-attachments/assets/bdd7e718-7aad-4200-9847-81e313a87aae" />
+` — actual UART output for valid records
+- `<img width="1312" height="761" alt="WhatsApp Image 2026-10-14 at 8 58 52 AM" src="https://github.com/user-attachments/assets/fefe9b7c-501c-4520-9c3f-638e9eab3f9b" />
+` — actual UART output after deliberately corrupting a CRC
 
-Place genuine project evidence in `docs/images/` and link it here:
 
-- `docs/images/hardware-setup.jpg` — actual board and EEPROM setup
-- `docs/images/uart-valid-read.png` — actual UART output for valid records
-- `docs/images/uart-crc-failure.png` — actual UART output after deliberately corrupting a CRC
-
-Do not use illustrative or stock images as evidence that your hardware test passed. If evidence has not been captured yet, leave these files out until available.
 
 ## Build and Run
 
@@ -175,20 +165,7 @@ In the supplied code, `NvM_Run()` calls `NvM_WriteAll()` when `WRITE_INITIAL_DAT
 
 Adapt this example to match the files actually present in the S32 Design Studio project; do not remove generated SDK or build configuration files required by the project.
 
-```text
-nvm-read-all-startup/
-├── src/
-│   ├── main.c
-│   └── nvm.c
-├── include/
-│   └── nvm.h
-├── docs/
-│   ├── architecture.md
-│   ├── test-plan.md
-│   └── images/
-├── README.md
-└── LICENSE                 # Add only after choosing a license
-```
+![Uploading WhatsApp Image 2026-10-14 at 9.01.05 AM.jpeg…]()
 
 ## Known Limitations and Review Notes
 
