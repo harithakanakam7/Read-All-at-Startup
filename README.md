@@ -184,16 +184,8 @@ The results below were captured on real hardware.
 
 ## Repository structure
 
-> Adjust this tree to match the files actually present in your S32 Design Studio project. Keep the generated SDK and build configuration files the project needs.
+<img width="852" height="1085" alt="image" src="https://github.com/user-attachments/assets/49e69811-2cb8-4f0d-9657-86a3874905f7" />
 
-```text
-Read-All-at-Startup/
-├── Sources/            # Application source (main.c, NvM, EEPROM, CRC)
-├── Generated_Code/     # Generated SDK / peripheral configuration
-├── Project_Settings/   # Linker, startup and debugger settings
-├── docs/               # Screenshots and supporting documentation
-└── README.md
-```
 
 ---
 
