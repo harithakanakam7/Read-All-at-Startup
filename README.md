@@ -122,9 +122,6 @@ Addresses are set through `BLOCK1_ADDRESS`, `BLOCK2_ADDRESS` and `BLOCK3_ADDRESS
 - **Match:** the payload is copied into the RAM mirror.
 - **Mismatch:** the block ID is added to the failed list and the payload is **not** copied.
 
-> [!IMPORTANT]
-> CRC detects accidental corruption. It is not encryption, authentication or a security boundary.
-
 ---
 
 ## Hardware and software
@@ -135,9 +132,6 @@ Addresses are set through `BLOCK1_ADDRESS`, `BLOCK2_ADDRESS` and `BLOCK3_ADDRESS
 | External I²C EEPROM *(part number to be documented)* | S32K144 SDK and generated peripheral configuration |
 | USB connection for programming/debugging | LPI2C and LPUART SDK drivers |
 | UART connection or onboard UART bridge | Embedded C, Git and GitHub |
-
-> [!TIP]
-> Before tagging a validated release, record the board revision, EEPROM part number, SDK version, compiler version and configured I²C address.
 
 ---
 
@@ -185,9 +179,6 @@ The results below were captured on real hardware.
 5. Make sure the application calls `NvM_Init()` **before** `NvM_Run()`.
 6. Open a serial terminal on the UART port and observe the output.
 7. Inspect the RAM mirrors and failed-block list in the debugger.
-
-> [!WARNING]
-> **Preserve stored data during Read-All testing.** When `WRITE_INITIAL_DATA == 1U`, `NvM_Run()` calls `NvM_WriteAll()` *before* `NvM_ReadAll()`, which overwrites the records you want to read back. To test restoration of previously stored data, set `WRITE_INITIAL_DATA` to `0U`, then run Read-All.
 
 ---
 
